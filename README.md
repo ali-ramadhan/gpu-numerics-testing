@@ -8,4 +8,4 @@ Some experiments being that have been discussed include
 
 - Simple variable space mixing test
 
-These tests and geared toward trying out some new coding styles and approaches including targeting accelerators (particularly GPU), different levels of abstraction (CUDA/OpenCL, C/modern Fortran, PyFR/http://dedalus-project.org style etc...) and differnt numerics (FV, DG, HDG etc....)
+These tests and geared toward trying out some new coding styles and approaches including targeting accelerators (particularly GPU), different levels of abstraction (CUDA/OpenCL, C/modern Fortran/C++, MOOSE[http://mooseframework.org] http://www.pyfr.org /http://dedalus-project.org style etc...) and differnt numerics (FV, DG, HDG etc....)
