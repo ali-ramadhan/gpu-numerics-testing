@@ -38,3 +38,6 @@
 *.ptx
 *.cubin
 *.fatbin
+
+# Output from PDE solvers.
+*.dat
