@@ -14,9 +14,9 @@ float normal_pdf(float x, float m, float s) {
     return (inv_sqrt_2pi / s) * std::exp(-0.5f * a * a);
 }
 
-void solve_1D_wave_equation(double mu, double sigma) {
-    // IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
-    // ofstream outfile("wave_evolution.dat");  // Storing time-dependent solution.
+void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
+    IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
+    ofstream outfile(output_filepath);
 
     /* Problem parameters */
     double c = 1.0;  // Propagation speed of the wave.
@@ -55,16 +55,18 @@ void solve_1D_wave_equation(double mu, double sigma) {
     for (int i = 1; i < N-1; i++)
         u_nm1(i) = normal_pdf(i*dx, mu, sigma);
 
-    // outfile << u_nm1.format(CommaInitFmt) << '\n';
+    // Output first row corresponding to initial condition (t = 0)
+    outfile << u_nm1.format(CommaInitFmt) << '\n';
 
-    // Take the first time step.
+    // Take the first time step (requires special scheme).
     u_n(0)   = 0;
     u_n(N-1) = 0;
 
     for (int i = 1; i < N-1; i++)
         u_n(i) = u_nm1(i) + (c*c/2) * (u_nm1(i+1) - 2*u_nm1(i) + u_nm1(i-1));
 
-    // outfile << u_n.format(CommaInitFmt) << '\n';
+    // Output second row corresponding to first time step.
+    outfile << u_n.format(CommaInitFmt) << '\n';
 
     double t = dt; // We already took one step so t = dt now.
 
@@ -84,43 +86,50 @@ void solve_1D_wave_equation(double mu, double sigma) {
         u_np1(0)   = 0;
         u_np1(N-1) = 0;
 
-        // outfile << u_np1.format(CommaInitFmt) << '\n';
+        outfile << u_np1.format(CommaInitFmt) << '\n';
         
         u_n = u_np1;
     }
     
-    // outfile.close();
+    outfile.close();
 }
 
 void solve_1D_wave_equations(int M, float *mu, float *sigma) {
-    for (int i = 0; i < M; i++)
-        solve_1D_wave_equation(mu[i], sigma[i]);
+    for (int i = 0; i < M; i++) {
+        string file_suffix = to_string(i);
+        file_suffix.insert(file_suffix.begin(), 3 - file_suffix.length(), '0');
+        string filename = "cpu_wave_" + file_suffix + ".dat";
+
+        cout << "Solving wave equation problem " << i << "..." << " (mu=" << mu[i] << ", sigma="
+             << sigma[i] << ")\n";
+
+        solve_1D_wave_equation(mu[i], sigma[i], filename);
+    }
 }
 
 int main() {
-    int M = 25;  // Number of problems to solve.
+    int M = 25;  // Number of 1D wave equation problems to solve.
 
     std::random_device rd;  // Obtain a random number generator from hardware.
-    std::mt19937 eng(rd()); // Seed the generator.
+    std::mt19937 mt(rd()); // Seed the Mersenne Twister generator.
 
-    /* We will impose a Gaussian initial condition for the 1D wave equation, with randomly
-     * generated means and standard deviations.
+    /* We will impose a Gaussian wave initial condition for the 1D wave equation, with randomly
+     * generated means (0.2 < mu < 0.8) and standard deviations (0.01 < sigma < 0.5).
      */
-    std::uniform_int_distribution<> uniform_mu(0.2, 0.8);
-    std::uniform_int_distribution<> uniform_sigma(0.01, 0.5);
+    std::uniform_real_distribution<float> uniform_mu(0.2, 0.8);
+    std::uniform_real_distribution<float> uniform_sigma(0.01, 0.5);
 
     float *mu = new float[M];
     float *sigma = new float[M];
 
     for(int i = 0; i < M; i++) {
-        mu[i] = uniform_mu(eng);
-        sigma[i] = uniform_sigma(eng);
+        mu[i] = uniform_mu(mt);
+        sigma[i] = uniform_sigma(mt);
     }
 
-    // Solve the M problems on the CPU.
+    // Solve the M problems one-by-one on the CPU.
     solve_1D_wave_equations(M, mu, sigma);
 
     delete [] mu;
     delete [] sigma;
 }
-
