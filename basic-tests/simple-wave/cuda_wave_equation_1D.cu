@@ -1,3 +1,13 @@
+/* To compile for an NVIDIA P100 GPU:
+ * nvcc --std=c++11 -g -G -lcusolver -lcublas -lcusparse
+ * -gencode=arch=compute_30,code=sm_30
+ * -gencode=arch=compute_35,code=sm_35 -gencode=arch=compute_50,code=sm_50
+ * -gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_52,code=compute_52
+ * -I ~/NVIDIA_CUDA-7.5_Samples/common/inc/ cuda_wave_equation_1D.cu -o cuda_wave_equation_1D.out
+ *
+ * See: https://docs.nvidia.com/cuda/pascal-compatibility-guide/index.html
+ */
+
 #include <iostream>
 #include <fstream>
 #include <random>
