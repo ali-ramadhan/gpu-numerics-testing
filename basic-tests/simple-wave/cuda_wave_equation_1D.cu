@@ -162,8 +162,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
     const double minus_one = -1.0;
     const double one = 1.0;
 
-    // IOFormat CommaInitFmt(StreamPrecision, DontAlignCols, ", ", ", ", "", "", "", "");
-    // ofstream outfile(output_filepath);
+    ofstream outfile(output_filepath);
 
     /* Problem parameters */
     double c = 1.0;  // Propagation speed of the wave.
@@ -220,7 +219,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
         u_nm1[i] = normal_pdf(i*dx, mu, sigma);
 
     // Output first row corresponding to initial condition (t = 0)
-    // outfile << u_nm1.format(CommaInitFmt) << '\n';
+    for (int i = 0; i < N-1; i++) outfile << u_nm1[i] <<','; outfile << u_nm1[N-1] << '\n';
 
     // Take the first time step.
     u_n[0]   = 0;
@@ -230,7 +229,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
         u_n[i] = u_nm1[i] + (c*c/2) * (u_nm1[i+1] - 2*u_nm1[i] + u_nm1[i-1]);
 
     // Output second row corresponding to first time step.
-    // outfile << u_n.format(CommaInitFmt) << '\n';
+    for (int i = 0; i < N-1; i++) outfile << u_n[i] <<','; outfile << u_n[N-1] << '\n';
 
     double t = dt; // We already took one step so t = dt now.
 
@@ -265,7 +264,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
         u_np1[0]   = 0;
         u_np1[N-1] = 0;
 
-        // outfile << u_np1.format(CommaInitFmt) << '\n';
+        for (int i = 0; i < N-1; i++) outfile << u_np1[i] <<','; outfile << u_np1[N-1] << '\n';
         
         u_n = u_np1;
     }
@@ -279,7 +278,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
     if (d_b) { checkCudaErrors(cudaFree(d_b)); }
     if (d_r) { checkCudaErrors(cudaFree(d_r)); }
 
-    // outfile.close();
+    outfile.close();
 }
 
 // __global__
@@ -287,7 +286,7 @@ void solve_1D_wave_equations(int M, double *mu, double *sigma) {
     for (int i = 0; i < M; i++) {
         string file_suffix = to_string(i);
         file_suffix.insert(file_suffix.begin(), 3 - file_suffix.length(), '0');
-        string filename = "cpu_wave_" + file_suffix + ".dat";
+        string filename = "cuda_wave_" + file_suffix + ".dat";
 
         // cout << "Solving wave equation problem " << i << "..." << " (block " << blockIdx.x
         //      << ", thread " << threadIdx.x << ", mu=" << mu[i] << ", sigma=" << sigma[i] << ")\n";
@@ -301,7 +300,7 @@ void solve_1D_wave_equations(int M, double *mu, double *sigma) {
 int main() {
     int M = 25;  // Number of 1D wave equation problems to solve.
 
-    std::cout << "Solving " << M << " problem." << std::endl;
+    std::cout << "Solving " << M << " problems." << std::endl;
 
     std::random_device rd;  // Obtain a random number generator from hardware.
     std::mt19937 mt(rd()); // Seed the Mersenne Twister generator.
