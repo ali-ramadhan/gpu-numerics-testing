@@ -179,7 +179,7 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
     /* We'll discretize the wave equation using the Crank-Nicolson method and
      * solve the resulting linear system A*u = b at every time step.
      */
-    double **A;
+    double *A;
     double *b;
     double *u_n;
     double *u_nm1;
@@ -190,10 +190,10 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
     int baseA = 0;  // base index in CSR format
     int lda   = N;  // leading dimension in dense matrix
 
-    checkCudaErrors(cudaMalloc((void **) &A, sizeof(double)*lda*colsA));
-    checkCudaErrors(cudaMalloc((void **) &b, sizeof(double)*rowsA));
-    checkCudaErrors(cudaMalloc((void **) &u_n, sizeof(double)*rowsA));
-    checkCudaErrors(cudaMalloc((void **) &u_nm1, sizeof(double)*rowsA));
+    checkCudaErrors(cudaMallocManaged((void **) &A, sizeof(double)*lda*colsA));
+    checkCudaErrors(cudaMallocManaged((void **) &b, sizeof(double)*rowsA));
+    checkCudaErrors(cudaMallocManaged((void **) &u_n, sizeof(double)*rowsA));
+    checkCudaErrors(cudaMallocManaged((void **) &u_nm1, sizeof(double)*rowsA));
 
     // Copies of the data on device memory.
     double *d_A = NULL; // a copy of A
@@ -202,15 +202,15 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
     double *d_r = NULL; // r = b - A*x
 
     // Initialize matrix of coefficients.
-    A[0][0]     = 1 + 2*alpha;
-    A[N-1][N-1] = 1 + 2*alpha;
-    A[0][1]     = -alpha;
-    A[N-1][N-2] = -alpha;
+    A[0]                 = 1 + 2*alpha;  // A[0][0]
+    A[rowsA*(N-1) + N-1] = 1 + 2*alpha;  // A[N-1][N-1]
+    A[1]                 = -alpha;       // A[0][1]
+    A[rowsA*(N-1) + N-2] = -alpha;       // A[N-1][N-2]
 
     for (int i = 1; i < N-1; i++) {
-        A[i][i] = 1 + 2*alpha;
-        A[i][i+1] = -alpha;
-        A[i][i-1] = -alpha;
+        A[rowsA*i + i] = 1 + 2*alpha;  // A[i][i]
+        A[rowsA*i + i+1] = -alpha;     // A[i][i+1]
+        A[rowsA*i + i-1] = -alpha;     // A[i][i-1]
     }
 
     // Set initial conditions.
@@ -246,12 +246,12 @@ void solve_1D_wave_equation(double mu, double sigma, string output_filepath) {
         u_nm1 = u_n;
         
         double *u_np1;
-        checkCudaErrors(cudaMalloc((void **) &u_np1, sizeof(double)*colsA));
+        checkCudaErrors(cudaMallocManaged((void **) &u_np1, sizeof(double)*colsA));
 
-        checkCudaErrors(cudaMalloc((void **) &d_A, sizeof(double)*lda*colsA));
-        checkCudaErrors(cudaMalloc((void **) &d_x, sizeof(double)*colsA));
-        checkCudaErrors(cudaMalloc((void **) &d_b, sizeof(double)*rowsA));
-        checkCudaErrors(cudaMalloc((void **) &d_r, sizeof(double)*rowsA));
+        checkCudaErrors(cudaMallocManaged((void **) &d_A, sizeof(double)*lda*colsA));
+        checkCudaErrors(cudaMallocManaged((void **) &d_x, sizeof(double)*colsA));
+        checkCudaErrors(cudaMallocManaged((void **) &d_b, sizeof(double)*rowsA));
+        checkCudaErrors(cudaMallocManaged((void **) &d_r, sizeof(double)*rowsA));
 
         checkCudaErrors(cudaMemcpy(d_A, A, sizeof(double)*lda*colsA, cudaMemcpyHostToDevice));
         checkCudaErrors(cudaMemcpy(d_b, b, sizeof(double)*rowsA, cudaMemcpyHostToDevice));
@@ -301,6 +301,8 @@ void solve_1D_wave_equations(int M, double *mu, double *sigma) {
 int main() {
     int M = 25;  // Number of 1D wave equation problems to solve.
 
+    std::cout << "Solving " << M << " problem." << std::endl;
+
     std::random_device rd;  // Obtain a random number generator from hardware.
     std::mt19937 mt(rd()); // Seed the Mersenne Twister generator.
 
@@ -312,6 +314,8 @@ int main() {
 
     double *mu, *sigma;
 
+    std::cout << "Generating initial conditions..." << std::endl;
+
     // Allocate unified memory
     cudaMallocManaged(&mu, M*sizeof(double));
     cudaMallocManaged(&sigma, M*sizeof(double));
@@ -320,6 +324,8 @@ int main() {
         mu[i] = uniform_mu(mt);
         sigma[i] = uniform_sigma(mt);
     }
+
+    std::cout << "Gaussian initial conditions randomly generated." << std::endl;
 
     // Solve the M problems on the CPU.
     // solve_1D_wave_equations<<<1, 1>>>(M, mu, sigma);
